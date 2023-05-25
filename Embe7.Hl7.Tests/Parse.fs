@@ -5,7 +5,6 @@ open Xunit
 open Swensen.Unquote.Assertions
 open Embe7.Hl7.Types
 open Embe7.Hl7.Parse
-open System
 
 let simpleParse p i =
     // NOTE: using eof to ensure the provided parser consumes all input
@@ -89,7 +88,7 @@ let ``parseFields does not allow arbitrary escapes`` () =
           " ^"
           "Expecting: 'E', 'F', 'H', 'R', 'S', 'T', 'X' or 'Z'"
           "" ]
-        |> String.concat Environment.NewLine
+        |> String.concat "\n"
 
     test <@ simpleParse parseFields "\\a|b" = Core.Error errMsg @>
 
@@ -349,7 +348,7 @@ MSH|INITECH|foobar|GenericApp|GenericFac|20210331145628||SIU^S17|202103311456285
           "^"
           "Expecting: end of input or segment name other than MSH"
           "" ]
-        |> String.concat Environment.NewLine
+        |> String.concat "\n"
 
     test <@ parse msg = Core.Error errMsg @>
 
