@@ -1,0 +1,7 @@
+<Project>
+	<PropertyGroup>
+		<Authors>tcallan</Authors>
+		<Copyright>Copyright © $([System.DateTime]::UtcNow.Year) tcallan</Copyright>
+		<Version>0.1.0</Version>
+	</PropertyGroup>
+</Project>
