@@ -34,7 +34,7 @@ module Format =
         let e = escape |> string |> Regex.Escape
 
         let regex =
-            sprintf "%sE%s([TSRFH]|[XZ].*?)%sE%s" e e e e
+            sprintf "%sE%s([TSRFH]|[XZ][\\da-fA-F]*?)%sE%s" e e e e
 
         let r (m: Match) =
             m.Groups

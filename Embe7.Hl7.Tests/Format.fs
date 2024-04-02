@@ -49,6 +49,11 @@ let ``formatSubComponent handles literal escape sequences`` str expected =
     test <@ formatSubComponent defaultSeparators sc = expected @>
 
 [<Fact>]
+let ``formatSubComponent does not falsely correct things that look like literal escape sequences`` () =
+    let sc = SubComponent.Create "\\X,\\"
+    test <@ formatSubComponent defaultSeparators sc = "\\E\\X,\\E\\" @>
+
+[<Fact>]
 let ``formatSubComponent handles weird control characters`` () =
     let sc = SubComponent.Create "\x1f"
     test <@ formatSubComponent defaultSeparators sc = "\\X1F\\" @>
