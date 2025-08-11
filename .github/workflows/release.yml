@@ -48,10 +48,7 @@ jobs:
         dotnet-version: 8.0.x
     - name: Pack
       run: dotnet pack Embe7.sln -o out
-    - name: Zip
-      run: zip -j nuget-${{github.ref_name}}.zip out/*
     - name: Release
       uses: softprops/action-gh-release@v1
       with:
-        files: |
-          nuget-${{github.ref_name}}.zip
+        files: out/*
