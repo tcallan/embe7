@@ -36,3 +36,22 @@ jobs:
       with:
         files: |
           ${{matrix.arch}}-${{github.ref_name}}.zip
+  pack:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup dotnet
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 8.0.x
+    - name: Pack
+      run: dotnet pack Embe7.sln -o out
+    - name: Zip
+      run: zip -j nuget-${{github.ref_name}}.zip out/*
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          nuget-${{github.ref_name}}.zip
