@@ -54,7 +54,7 @@ module Paths =
         fields
         |> List.tryItem index
         |> optToResult "invalid field"
-        |> Result.bind (Field.Contents >> singleOrByIndex "invalid field repeat" (path.FieldRepeat))
+        |> Result.bind (Field.Contents >> singleOrByIndex "invalid field repeat" path.FieldRepeat)
         |> Result.bind (
             FieldRepeat.Contents
             >> singleOrByIndex "invalid component" (path.Component |> toZeroIx)
@@ -74,7 +74,7 @@ module Paths =
     let private getSegmentFieldStrict (message: Embe7.Hl7.Message) (path: Path) =
         message.Segments
         |> List.filter (fun seg -> seg.Name = path.Segment)
-        |> singleOrByIndex "invalid segment" (path.SegmentRepeat)
+        |> singleOrByIndex "invalid segment" path.SegmentRepeat
         |> Result.bind (MessageSegment.Contents >> getFieldStrict path (path.Field - 1))
 
     let getStrictValue (message: Embe7.Hl7.Message) (path: Path) =
@@ -90,7 +90,7 @@ module Paths =
     let private getFieldSmart path index fields =
         fields
         |> manyOrByIndex (Some index)
-        |> List.collect (Field.Contents >> manyOrByIndex (path.FieldRepeat))
+        |> List.collect (Field.Contents >> manyOrByIndex path.FieldRepeat)
         |> List.collect (FieldRepeat.Contents >> manyOrByIndex (path.Component |> toZeroIx))
         |> List.collect (Component.Contents >> manyOrByIndex (path.SubComponent |> toZeroIx))
         |> List.map SubComponent.Contents
@@ -104,8 +104,8 @@ module Paths =
     let private getSegmentFieldSmart (message: Embe7.Hl7.Message) (path: Path) =
         message.Segments
         |> List.filter (fun seg -> seg.Name = path.Segment)
-        |> manyOrByIndex (path.SegmentRepeat)
-        |> List.collect ((MessageSegment.Contents >> getFieldSmart path (path.Field - 1)))
+        |> manyOrByIndex path.SegmentRepeat
+        |> List.collect (MessageSegment.Contents >> getFieldSmart path (path.Field - 1))
 
     let getSmartValue (message: Embe7.Hl7.Message) (path: Path) =
         match path.Segment with

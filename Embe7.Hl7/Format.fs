@@ -43,27 +43,27 @@ module Format =
 
         Regex.Replace(value, regex, r)
 
-    let internal formatSubComponent separators ({ Value = value }) =
+    let internal formatSubComponent separators { Value = value } =
         value
-        |> escape (separators.Escape) (separators.Escape) 'E'
-        |> escape (separators.Escape) (separators.SubComponent) 'T'
-        |> escape (separators.Escape) (separators.Component) 'S'
-        |> escape (separators.Escape) (separators.FieldRepeat) 'R'
-        |> escape (separators.Escape) (separators.Field) 'F'
-        |> escapeNonPrinting (separators.Escape)
-        |> fixPreEscaped (separators.Escape)
+        |> escape separators.Escape separators.Escape 'E'
+        |> escape separators.Escape separators.SubComponent 'T'
+        |> escape separators.Escape separators.Component 'S'
+        |> escape separators.Escape separators.FieldRepeat 'R'
+        |> escape separators.Escape separators.Field 'F'
+        |> escapeNonPrinting separators.Escape
+        |> fixPreEscaped separators.Escape
 
-    let internal formatComponent separators ({ SubComponents = subComponents }) =
+    let internal formatComponent separators { SubComponents = subComponents } =
         subComponents
         |> List.map (formatSubComponent separators)
         |> String.concat (separators.SubComponent |> string)
 
-    let internal formatRepetition separators ({ Components = components }) =
+    let internal formatRepetition separators { Components = components } =
         components
         |> List.map (formatComponent separators)
         |> String.concat (separators.Component |> string)
 
-    let internal formatField separators ({ FieldRepeats = repetitions }) =
+    let internal formatField separators { FieldRepeats = repetitions } =
         repetitions
         |> List.map (formatRepetition separators)
         |> String.concat (separators.FieldRepeat |> string)
@@ -73,15 +73,15 @@ module Format =
         |> List.map (formatField separators)
         |> String.concat (separators.Field |> string)
 
-    let internal formatMessageHeader ({ Separators = seps; Fields = fields }) =
+    let internal formatMessageHeader { Separators = seps; Fields = fields } =
         $"MSH%s{formatSeparators seps}%c{seps.Field}%s{formatFields seps fields}"
 
-    let internal formatSegment separators ({ Name = name; Fields = fields }) =
+    let internal formatSegment separators { Name = name; Fields = fields } =
         $"%s{name}%c{separators.Field}%s{formatFields separators fields}"
 
     [<CompiledName("FormatMessage")>]
     let formatMessage (msg: Message) =
-        formatMessageHeader (msg.Header)
-        :: (List.map (formatSegment msg.Header.Separators) (msg.Segments))
+        formatMessageHeader msg.Header
+        :: (List.map (formatSegment msg.Header.Separators) msg.Segments)
         |> String.concat "\r"
         |> (fun x -> x + "\r")

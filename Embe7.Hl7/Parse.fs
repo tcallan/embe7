@@ -79,7 +79,7 @@ module Parse =
     let private escaped: Parser<string, Separators> =
         parse {
             let! seps = getUserState
-            let escape = pchar (seps.Escape)
+            let escape = pchar seps.Escape
             return! between escape escape escapeSequence
         }
 
@@ -108,7 +108,7 @@ module Parse =
     let private parseFieldSep =
         parse {
             let! seps = getUserState
-            return! pchar (seps.Field)
+            return! pchar seps.Field
         }
 
     let internal parseFields = sepBy parseField parseFieldSep
