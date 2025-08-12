@@ -44,7 +44,7 @@ module Format =
 
         Regex.Replace(value, regex, r)
 
-    let formatSubComponent separators ({ Value = value }) =
+    let internal formatSubComponent separators ({ Value = value }) =
         value
         |> escape (separators.Escape) (separators.Escape) 'E'
         |> escape (separators.Escape) (separators.SubComponent) 'T'
@@ -54,30 +54,30 @@ module Format =
         |> escapeNonPrinting (separators.Escape)
         |> fixPreEscaped (separators.Escape)
 
-    let formatComponent separators ({ SubComponents = subComponents }) =
+    let internal formatComponent separators ({ SubComponents = subComponents }) =
         subComponents
         |> List.map (formatSubComponent separators)
         |> String.concat (separators.SubComponent |> string)
 
-    let formatRepetition separators ({ Components = components }) =
+    let internal formatRepetition separators ({ Components = components }) =
         components
         |> List.map (formatComponent separators)
         |> String.concat (separators.Component |> string)
 
-    let formatField separators ({ FieldRepeats = repetitions }) =
+    let internal formatField separators ({ FieldRepeats = repetitions }) =
         repetitions
         |> List.map (formatRepetition separators)
         |> String.concat (separators.FieldRepeat |> string)
 
-    let formatFields separators fields =
+    let internal formatFields separators fields =
         fields
         |> List.map (formatField separators)
         |> String.concat (separators.Field |> string)
 
-    let formatMessageHeader ({ Separators = seps; Fields = fields }) =
+    let internal formatMessageHeader ({ Separators = seps; Fields = fields }) =
         sprintf "MSH%s%c%s" (formatSeparators seps) (seps.Field) (formatFields seps fields)
 
-    let formatSegment separators ({ Name = name; Fields = fields }) =
+    let internal formatSegment separators ({ Name = name; Fields = fields }) =
         sprintf "%s%c%s" name (separators.Field) (formatFields separators fields)
 
     let formatMessage (msg: Message) =

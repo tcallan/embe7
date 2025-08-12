@@ -2,7 +2,7 @@ module TypesTests
 
 open Xunit
 open Swensen.Unquote.Assertions
-open Embe7.Hl7.Types
+open Embe7.Hl7
 
 let mkComponentField xs =
     xs

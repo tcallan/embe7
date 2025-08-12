@@ -143,7 +143,7 @@ module Parse =
         many1 (between mllpFrameStart mllpFrameEnd parseMessage) .>> eof
 
     let private parse' parser input =
-        match runParserOnString parser defaultSeparators "" input with
+        match runParserOnString parser Separators.Default "" input with
         | Success(result, _, _) -> Core.Ok result
         | Failure(err, _, _) -> Core.Error err
 

@@ -1,6 +1,5 @@
 namespace Embe7.Hl7
 
-open Types
 open FParsec
 
 // TODO: tests
@@ -66,19 +65,19 @@ module Paths =
         )
         |> Result.map SubComponent.Contents
 
-    let private getMshFieldStrict (message: Types.Message) (path: Path) =
+    let private getMshFieldStrict (message: Embe7.Hl7.Message) (path: Path) =
         match path.Field with
         | 1 -> message.Header.Separators.Field |> string |> Result.Ok
         | 2 -> message.Header.Separators |> Format.formatSeparators |> Result.Ok
         | n -> message.Header.Fields |> getFieldStrict path (n - 3)
 
-    let private getSegmentFieldStrict (message: Types.Message) (path: Path) =
+    let private getSegmentFieldStrict (message: Embe7.Hl7.Message) (path: Path) =
         message.Segments
         |> List.filter (fun seg -> seg.Name = path.Segment)
         |> singleOrByIndex "invalid segment" (path.SegmentRepeat)
         |> Result.bind (MessageSegment.Contents >> getFieldStrict path (path.Field - 1))
 
-    let getStrictValue (message: Types.Message) (path: Path) =
+    let getStrictValue (message: Embe7.Hl7.Message) (path: Path) =
         match path.Segment with
         | "MSH" -> getMshFieldStrict message path
         | _ -> getSegmentFieldStrict message path
@@ -96,19 +95,19 @@ module Paths =
         |> List.collect (Component.Contents >> manyOrByIndex (path.SubComponent |> toZeroIx))
         |> List.map SubComponent.Contents
 
-    let getMshFieldSmart (message: Types.Message) (path: Path) =
+    let getMshFieldSmart (message: Embe7.Hl7.Message) (path: Path) =
         match path.Field with
         | 1 -> message.Header.Separators.Field |> string |> List.singleton
         | 2 -> message.Header.Separators |> Format.formatSeparators |> List.singleton
         | n -> message.Header.Fields |> getFieldSmart path (n - 3)
 
-    let private getSegmentFieldSmart (message: Types.Message) (path: Path) =
+    let private getSegmentFieldSmart (message: Embe7.Hl7.Message) (path: Path) =
         message.Segments
         |> List.filter (fun seg -> seg.Name = path.Segment)
         |> manyOrByIndex (path.SegmentRepeat)
         |> List.collect ((MessageSegment.Contents >> getFieldSmart path (path.Field - 1)))
 
-    let getSmartValue (message: Types.Message) (path: Path) =
+    let getSmartValue (message: Embe7.Hl7.Message) (path: Path) =
         match path.Segment with
         | "MSH" -> getMshFieldSmart message path
         | _ -> getSegmentFieldSmart message path

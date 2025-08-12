@@ -3,13 +3,13 @@ module ParseTests
 open FParsec
 open Xunit
 open Swensen.Unquote.Assertions
-open Embe7.Hl7.Types
+open Embe7.Hl7
 open Embe7.Hl7.Parse
 open System
 
 let simpleParse p i =
     // NOTE: using eof to ensure the provided parser consumes all input
-    match runParserOnString (p .>> eof) defaultSeparators "test" i with
+    match runParserOnString (p .>> eof) Separators.Default "test" i with
     | Success(result, _, _) -> Core.Ok result
     | Failure(err, _, _) -> Core.Error err
 
@@ -359,7 +359,7 @@ let ``parseMllp handles single message`` () =
 
     let expected =
         [ { Header =
-              { Separators = defaultSeparators
+              { Separators = Separators.Default
                 Fields = [ mkSimpleField "A"; mkSimpleField "B"; mkSimpleField "C" ] }
             Segments = [] } ]
 
@@ -371,7 +371,7 @@ let ``parseMllp handles multiple messages`` () =
 
     let expected =
         { Header =
-            { Separators = defaultSeparators
+            { Separators = Separators.Default
               Fields = [ mkSimpleField "A"; mkSimpleField "B"; mkSimpleField "C" ] }
           Segments = [ MessageSegment.Create("ZZZ", [ mkSimpleField "A" ]) ] }
 

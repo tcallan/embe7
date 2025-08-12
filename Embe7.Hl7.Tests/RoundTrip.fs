@@ -1,7 +1,7 @@
 module RoundTripTests
 
 open FsCheck.Xunit
-open Embe7.Hl7.Types
+open Embe7.Hl7
 open Embe7.Hl7.Format
 open Embe7.Hl7.Parse
 open FsCheck
