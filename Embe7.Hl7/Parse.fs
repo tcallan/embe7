@@ -10,11 +10,11 @@ module Parse =
     let private segmentSep = newline
 
     let private mkSeparators (field, comp, fieldRepeat, escape, subComponent) =
-        { Field = field
-          Component = comp
-          SubComponent = subComponent
-          FieldRepeat = fieldRepeat
-          Escape = escape }
+        { FieldChar = field
+          ComponentChar = comp
+          SubComponentChar = subComponent
+          FieldRepeatChar = fieldRepeat
+          EscapeChar = escape }
 
     let private parseSeparators =
         parse {
@@ -30,11 +30,11 @@ module Parse =
         }
 
     let private toList seps =
-        [| seps.Field
-           seps.Component
-           seps.SubComponent
-           seps.FieldRepeat
-           seps.Escape
+        [| seps.FieldChar
+           seps.ComponentChar
+           seps.SubComponentChar
+           seps.FieldRepeatChar
+           seps.EscapeChar
            '\n'
            '\x0b'
            '\x1c' |]
@@ -66,11 +66,11 @@ module Parse =
             let pescape c r = pchar c >>% (r |> string)
 
             return!
-                pescape 'E' seps.Escape
-                <|> pescape 'F' seps.Field
-                <|> pescape 'R' seps.FieldRepeat
-                <|> pescape 'S' seps.Component
-                <|> pescape 'T' seps.SubComponent
+                pescape 'E' seps.EscapeChar
+                <|> pescape 'F' seps.FieldChar
+                <|> pescape 'R' seps.FieldRepeatChar
+                <|> pescape 'S' seps.ComponentChar
+                <|> pescape 'T' seps.SubComponentChar
                 <|> (pchar 'H' >>% "\\H\\")
                 <|> hexed
                 <|> custom
@@ -79,7 +79,7 @@ module Parse =
     let private escaped: Parser<string, Separators> =
         parse {
             let! seps = getUserState
-            let escape = pchar seps.Escape
+            let escape = pchar seps.EscapeChar
             return! between escape escape escapeSequence
         }
 
@@ -97,18 +97,18 @@ module Parse =
         }
 
     let private parseComponent =
-        parseDelimited (fun s -> s.SubComponent) parseSubComponent Component.Create
+        parseDelimited (fun s -> s.SubComponentChar) parseSubComponent Component.Create
 
     let private parseFieldRepeat =
-        parseDelimited (fun s -> s.Component) parseComponent FieldRepeat.Create
+        parseDelimited (fun s -> s.ComponentChar) parseComponent FieldRepeat.Create
 
     let private parseField =
-        parseDelimited (fun s -> s.FieldRepeat) parseFieldRepeat Field.Create
+        parseDelimited (fun s -> s.FieldRepeatChar) parseFieldRepeat Field.Create
 
     let private parseFieldSep =
         parse {
             let! seps = getUserState
-            return! pchar seps.Field
+            return! pchar seps.FieldChar
         }
 
     let internal parseFields = sepBy parseField parseFieldSep
@@ -130,7 +130,7 @@ module Parse =
     let private parseMessage =
         parseMessageHeader
         .>>. (segmentSep >>. sepEndBy parseSegment segmentSep <|>% [])
-        |>> fun (header, segments) -> { Header = header; Segments = segments }
+        |>> fun (header, segments) -> { HeaderValue = header; SegmentsList = segments }
 
     let private parseSingleMessage = parseMessage .>> eof
 

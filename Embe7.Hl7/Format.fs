@@ -5,7 +5,7 @@ open System.Text.RegularExpressions
 // TODO: tests
 module Format =
     let internal formatSeparators seps =
-        $"%c{seps.Field}%c{seps.Component}%c{seps.FieldRepeat}%c{seps.Escape}%c{seps.SubComponent}"
+        $"%c{seps.FieldChar}%c{seps.ComponentChar}%c{seps.FieldRepeatChar}%c{seps.EscapeChar}%c{seps.SubComponentChar}"
 
     /// <summary>
     /// Replace a character that is not otherwise allowed to appear in HL7 messages with a valid
@@ -45,43 +45,43 @@ module Format =
 
     let internal formatSubComponent separators { Value = value } =
         value
-        |> escape separators.Escape separators.Escape 'E'
-        |> escape separators.Escape separators.SubComponent 'T'
-        |> escape separators.Escape separators.Component 'S'
-        |> escape separators.Escape separators.FieldRepeat 'R'
-        |> escape separators.Escape separators.Field 'F'
-        |> escapeNonPrinting separators.Escape
-        |> fixPreEscaped separators.Escape
+        |> escape separators.EscapeChar separators.EscapeChar 'E'
+        |> escape separators.EscapeChar separators.SubComponentChar 'T'
+        |> escape separators.EscapeChar separators.ComponentChar 'S'
+        |> escape separators.EscapeChar separators.FieldRepeatChar 'R'
+        |> escape separators.EscapeChar separators.FieldChar 'F'
+        |> escapeNonPrinting separators.EscapeChar
+        |> fixPreEscaped separators.EscapeChar
 
-    let internal formatComponent separators { SubComponents = subComponents } =
+    let internal formatComponent separators { SubComponentsList = subComponents } =
         subComponents
         |> List.map (formatSubComponent separators)
-        |> String.concat (separators.SubComponent |> string)
+        |> String.concat (separators.SubComponentChar |> string)
 
-    let internal formatRepetition separators { Components = components } =
+    let internal formatRepetition separators { ComponentsList = components } =
         components
         |> List.map (formatComponent separators)
-        |> String.concat (separators.Component |> string)
+        |> String.concat (separators.ComponentChar |> string)
 
-    let internal formatField separators { FieldRepeats = repetitions } =
+    let internal formatField separators { FieldRepeatsList = repetitions } =
         repetitions
         |> List.map (formatRepetition separators)
-        |> String.concat (separators.FieldRepeat |> string)
+        |> String.concat (separators.FieldRepeatChar |> string)
 
     let internal formatFields separators fields =
         fields
         |> List.map (formatField separators)
-        |> String.concat (separators.Field |> string)
+        |> String.concat (separators.FieldChar |> string)
 
-    let internal formatMessageHeader { Separators = seps; Fields = fields } =
-        $"MSH%s{formatSeparators seps}%c{seps.Field}%s{formatFields seps fields}"
+    let internal formatMessageHeader { SeparatorsValue = seps; FieldsList = fields } =
+        $"MSH%s{formatSeparators seps}%c{seps.FieldChar}%s{formatFields seps fields}"
 
-    let internal formatSegment separators { Name = name; Fields = fields } =
-        $"%s{name}%c{separators.Field}%s{formatFields separators fields}"
+    let internal formatSegment separators { NameValue = name; FieldsList = fields } =
+        $"%s{name}%c{separators.FieldChar}%s{formatFields separators fields}"
 
     [<CompiledName("FormatMessage")>]
     let formatMessage (msg: Message) =
-        formatMessageHeader msg.Header
-        :: (List.map (formatSegment msg.Header.Separators) msg.Segments)
+        formatMessageHeader msg.HeaderValue
+        :: (List.map (formatSegment msg.HeaderValue.SeparatorsValue) msg.SegmentsList)
         |> String.concat "\r"
         |> (fun x -> x + "\r")

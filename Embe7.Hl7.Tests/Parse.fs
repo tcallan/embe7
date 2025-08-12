@@ -157,11 +157,11 @@ let ``parseMessageHeader handles a normal MSH segment`` () =
 
     let expected =
         MessageHeader.Create(
-            { Field = '|'
-              Component = '^'
-              FieldRepeat = '~'
-              Escape = '\\'
-              SubComponent = '&' },
+            { FieldChar = '|'
+              ComponentChar = '^'
+              FieldRepeatChar = '~'
+              EscapeChar = '\\'
+              SubComponentChar = '&' },
             [ mkComponentField [ "INITECH"; "INITECH"; "GUID" ]
               mkSimpleField ""
               mkComponentField [ "INITRODE"; "INITRODE"; "GUID" ]
@@ -183,11 +183,11 @@ let ``parseMessageHeader handles a minimal MSH segment`` () =
 
     let expected =
         MessageHeader.Create(
-            { Field = '|'
-              Component = '^'
-              FieldRepeat = '~'
-              Escape = '\\'
-              SubComponent = '&' },
+            { FieldChar = '|'
+              ComponentChar = '^'
+              FieldRepeatChar = '~'
+              EscapeChar = '\\'
+              SubComponentChar = '&' },
             [ mkSimpleField "" ]
         )
 
@@ -198,16 +198,16 @@ let ``parse handles a minimal message`` () =
     let msg = "MSH|^~\\&|"
 
     let expected =
-        { Header =
+        { HeaderValue =
             MessageHeader.Create(
-                { Field = '|'
-                  Component = '^'
-                  FieldRepeat = '~'
-                  Escape = '\\'
-                  SubComponent = '&' },
+                { FieldChar = '|'
+                  ComponentChar = '^'
+                  FieldRepeatChar = '~'
+                  EscapeChar = '\\'
+                  SubComponentChar = '&' },
                 [ mkSimpleField "" ]
             )
-          Segments = [] }
+          SegmentsList = [] }
 
     test <@ parse msg = Core.Ok expected @>
 
@@ -216,16 +216,16 @@ let ``parse handles a small message`` () =
     let msg = "MSH|^~\\&|\rOBX|\r"
 
     let expected =
-        { Header =
+        { HeaderValue =
             MessageHeader.Create(
-                { Field = '|'
-                  Component = '^'
-                  FieldRepeat = '~'
-                  Escape = '\\'
-                  SubComponent = '&' },
+                { FieldChar = '|'
+                  ComponentChar = '^'
+                  FieldRepeatChar = '~'
+                  EscapeChar = '\\'
+                  SubComponentChar = '&' },
                 [ mkSimpleField "" ]
             )
-          Segments = [ MessageSegment.Create("OBX", [ mkSimpleField "" ]) ] }
+          SegmentsList = [ MessageSegment.Create("OBX", [ mkSimpleField "" ]) ] }
 
     test <@ parse msg = Core.Ok expected @>
 
@@ -310,13 +310,13 @@ AIL|1||^^^|||||||||"""
         )
 
     let expected =
-        { Header =
+        { HeaderValue =
             MessageHeader.Create(
-                { Field = '|'
-                  Component = '^'
-                  FieldRepeat = '~'
-                  Escape = '\\'
-                  SubComponent = '&' },
+                { FieldChar = '|'
+                  ComponentChar = '^'
+                  FieldRepeatChar = '~'
+                  EscapeChar = '\\'
+                  SubComponentChar = '&' },
                 [ mkSimpleField "INITECH"
                   mkSimpleField "foobar"
                   mkSimpleField "GenericApp"
@@ -333,7 +333,7 @@ AIL|1||^^^|||||||||"""
                   mkSimpleField "AL"
                   mkSimpleField "" ]
             )
-          Segments = [ sch; tq1; pid; aip; ais; aig; ail ] }
+          SegmentsList = [ sch; tq1; pid; aip; ais; aig; ail ] }
 
     test <@ parse msg = Core.Ok expected @>
 
@@ -358,10 +358,10 @@ let ``parseMllp handles single message`` () =
     let msg = "\x0bMSH|^~\\&|A|B|C\x1c\r"
 
     let expected =
-        [ { Header =
-              { Separators = Separators.Default
-                Fields = [ mkSimpleField "A"; mkSimpleField "B"; mkSimpleField "C" ] }
-            Segments = [] } ]
+        [ { HeaderValue =
+              { SeparatorsValue = Separators.Default
+                FieldsList = [ mkSimpleField "A"; mkSimpleField "B"; mkSimpleField "C" ] }
+            SegmentsList = [] } ]
 
     test <@ parseMllp msg = Core.Ok expected @>
 
@@ -370,9 +370,9 @@ let ``parseMllp handles multiple messages`` () =
     let msg = "\x0bMSH|^~\\&|A|B|C\nZZZ|A\n\x1c\r\x0bMSH|^~\\&|A|B|C\nZZZ|A\n\x1c\r"
 
     let expected =
-        { Header =
-            { Separators = Separators.Default
-              Fields = [ mkSimpleField "A"; mkSimpleField "B"; mkSimpleField "C" ] }
-          Segments = [ MessageSegment.Create("ZZZ", [ mkSimpleField "A" ]) ] }
+        { HeaderValue =
+            { SeparatorsValue = Separators.Default
+              FieldsList = [ mkSimpleField "A"; mkSimpleField "B"; mkSimpleField "C" ] }
+          SegmentsList = [ MessageSegment.Create("ZZZ", [ mkSimpleField "A" ]) ] }
 
     test <@ parseMllp msg = Core.Ok [ expected; expected ] @>

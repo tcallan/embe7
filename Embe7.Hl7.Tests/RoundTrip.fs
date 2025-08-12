@@ -25,11 +25,11 @@ type MessageArb =
             |> five
             |> Gen.filter distinct
             |> Gen.map (fun (a, b, c, d, e) ->
-                { Field = a
-                  FieldRepeat = b
-                  Component = c
-                  SubComponent = d
-                  Escape = e })
+                { FieldChar = a
+                  FieldRepeatChar = b
+                  ComponentChar = c
+                  SubComponentChar = d
+                  EscapeChar = e })
 
         Arb.fromGen gen
 

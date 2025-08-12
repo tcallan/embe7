@@ -64,15 +64,18 @@ module Paths =
             >> singleOrByIndex "invalid subcomponent" (path.SubComponent |> toZeroIx)
         )
         |> Result.map SubComponent.Contents
+        
+    let private msh2 seps =
+        $"%c{seps.ComponentChar}%c{seps.FieldRepeatChar}%c{seps.EscapeChar}%c{seps.SubComponentChar}"
 
     let private getMshFieldStrict (message: Embe7.Hl7.Message) (path: Path) =
         match path.Field with
-        | 1 -> message.Header.Separators.Field |> string |> Result.Ok
-        | 2 -> message.Header.Separators |> Format.formatSeparators |> Result.Ok
-        | n -> message.Header.Fields |> getFieldStrict path (n - 3)
+        | 1 -> message.Header.Separators.FieldChar |> string |> Result.Ok
+        | 2 -> msh2 message.Header.Separators |> Result.Ok
+        | n -> message.Header.FieldsList |> getFieldStrict path (n - 3)
 
     let private getSegmentFieldStrict (message: Embe7.Hl7.Message) (path: Path) =
-        message.Segments
+        message.SegmentsList
         |> List.filter (fun seg -> seg.Name = path.Segment)
         |> singleOrByIndex "invalid segment" path.SegmentRepeat
         |> Result.bind (MessageSegment.Contents >> getFieldStrict path (path.Field - 1))
@@ -97,12 +100,12 @@ module Paths =
 
     let getMshFieldSmart (message: Embe7.Hl7.Message) (path: Path) =
         match path.Field with
-        | 1 -> message.Header.Separators.Field |> string |> List.singleton
-        | 2 -> message.Header.Separators |> Format.formatSeparators |> List.singleton
-        | n -> message.Header.Fields |> getFieldSmart path (n - 3)
+        | 1 -> message.Header.Separators.FieldChar |> string |> List.singleton
+        | 2 -> msh2 message.Header.Separators |> List.singleton
+        | n -> message.Header.FieldsList |> getFieldSmart path (n - 3)
 
     let private getSegmentFieldSmart (message: Embe7.Hl7.Message) (path: Path) =
-        message.Segments
+        message.SegmentsList
         |> List.filter (fun seg -> seg.Name = path.Segment)
         |> manyOrByIndex path.SegmentRepeat
         |> List.collect (MessageSegment.Contents >> getFieldSmart path (path.Field - 1))

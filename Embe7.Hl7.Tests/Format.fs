@@ -112,11 +112,11 @@ let ``formatMessageHeader works with no fields`` () =
 [<Fact>]
 let ``formatMessageHeader works with non standard separators`` () =
     let seps =
-        { Field = '*'
-          FieldRepeat = '%'
-          Escape = '`'
-          Component = '$'
-          SubComponent = '@' }
+        { FieldChar = '*'
+          FieldRepeatChar = '%'
+          EscapeChar = '`'
+          ComponentChar = '$'
+          SubComponentChar = '@' }
 
     let h = MessageHeader.Create(seps, [ Field.Create "test" ])
 
