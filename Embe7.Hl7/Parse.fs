@@ -1,7 +1,6 @@
 namespace Embe7.Hl7
 
 open FParsec
-open Types
 open System
 open System.Globalization
 
@@ -147,6 +146,8 @@ module Parse =
         | Success(result, _, _) -> Core.Ok result
         | Failure(err, _, _) -> Core.Error err
 
+    [<CompiledName("Parse")>]
     let parse = parse' parseSingleMessage
 
+    [<CompiledName("ParseMllp")>]
     let parseMllp = parse' parseMllpMessages

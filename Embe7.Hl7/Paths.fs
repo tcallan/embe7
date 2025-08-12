@@ -111,7 +111,7 @@ module Paths =
         match path.Segment with
         | "MSH" -> getMshFieldSmart message path
         | _ -> getSegmentFieldSmart message path
-
+        
     let getPath path =
         match run parsePath path with
         | Success(result, _, _) -> Result.Ok result

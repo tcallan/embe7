@@ -1,6 +1,5 @@
 namespace Embe7.Hl7
 
-open Types
 open System.Text.RegularExpressions
 
 // TODO: tests
@@ -80,6 +79,7 @@ module Format =
     let internal formatSegment separators ({ Name = name; Fields = fields }) =
         sprintf "%s%c%s" name (separators.Field) (formatFields separators fields)
 
+    [<CompiledName("FormatMessage")>]
     let formatMessage (msg: Message) =
         formatMessageHeader (msg.Header)
         :: (List.map (formatSegment msg.Header.Separators) (msg.Segments))
