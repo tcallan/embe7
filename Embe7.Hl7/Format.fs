@@ -5,7 +5,7 @@ open System.Text.RegularExpressions
 // TODO: tests
 module Format =
     let internal formatSeparators seps =
-        sprintf "%c%c%c%c%c" seps.Field seps.Component seps.FieldRepeat seps.Escape seps.SubComponent
+        $"%c{seps.Field}%c{seps.Component}%c{seps.FieldRepeat}%c{seps.Escape}%c{seps.SubComponent}"
 
     /// <summary>
     /// Replace a character that is not otherwise allowed to appear in HL7 messages with a valid
@@ -18,7 +18,7 @@ module Format =
     /// <param name="value">the string to replace values in</param>
     let escape (escape: char) (x: char) (escaped: char) (value: string) =
         let from = x |> string
-        let new' = sprintf "%c%c%c" escape escaped escape
+        let new' = $"%c{escape}%c{escaped}%c{escape}"
         value.Replace(from, new')
 
     let private stringToHex s =
@@ -27,18 +27,18 @@ module Format =
         |> String.concat ""
 
     let internal escapeNonPrinting (escape: char) (value: string) =
-        Regex.Replace(value, "\\p{Cc}+", (fun c -> sprintf "%cX%s%c" escape (stringToHex c.Value) escape))
+        Regex.Replace(value, "\\p{Cc}+", (fun c -> $"%c{escape}X%s{stringToHex c.Value}%c{escape}"))
 
     let private fixPreEscaped (escape: char) (value: string) =
         let e = escape |> string |> Regex.Escape
 
         let regex =
-            sprintf "%sE%s([TSRFH]|[XZ][\\da-fA-F]*?)%sE%s" e e e e
+            $"%s{e}E%s{e}([TSRFH]|[XZ][\\da-fA-F]*?)%s{e}E%s{e}"
 
         let r (m: Match) =
             m.Groups
             |> Seq.tryItem 1
-            |> Option.map (fun c -> sprintf "%c%s%c" escape c.Value escape)
+            |> Option.map (fun c -> $"%c{escape}%s{c.Value}%c{escape}")
             |> Option.defaultValue m.Value
 
         Regex.Replace(value, regex, r)
@@ -74,10 +74,10 @@ module Format =
         |> String.concat (separators.Field |> string)
 
     let internal formatMessageHeader ({ Separators = seps; Fields = fields }) =
-        sprintf "MSH%s%c%s" (formatSeparators seps) (seps.Field) (formatFields seps fields)
+        $"MSH%s{formatSeparators seps}%c{seps.Field}%s{formatFields seps fields}"
 
     let internal formatSegment separators ({ Name = name; Fields = fields }) =
-        sprintf "%s%c%s" name (separators.Field) (formatFields separators fields)
+        $"%s{name}%c{separators.Field}%s{formatFields separators fields}"
 
     [<CompiledName("FormatMessage")>]
     let formatMessage (msg: Message) =
