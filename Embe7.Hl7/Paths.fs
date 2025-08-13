@@ -80,6 +80,7 @@ module Paths =
         |> singleOrByIndex "invalid segment" path.SegmentRepeat
         |> Result.bind (MessageSegment.Contents >> getFieldStrict path (path.Field - 1))
 
+    [<CompiledName("GetStrictValue")>]
     let getStrictValue (message: Embe7.Hl7.Message) (path: Path) =
         match path.Segment with
         | "MSH" -> getMshFieldStrict message path
@@ -98,7 +99,7 @@ module Paths =
         |> List.collect (Component.Contents >> manyOrByIndex (path.SubComponent |> toZeroIx))
         |> List.map SubComponent.Contents
 
-    let getMshFieldSmart (message: Embe7.Hl7.Message) (path: Path) =
+    let private getMshFieldSmart (message: Embe7.Hl7.Message) (path: Path) =
         match path.Field with
         | 1 -> message.Header.Separators.FieldChar |> string |> List.singleton
         | 2 -> msh2 message.Header.Separators |> List.singleton
@@ -110,12 +111,48 @@ module Paths =
         |> manyOrByIndex path.SegmentRepeat
         |> List.collect (MessageSegment.Contents >> getFieldSmart path (path.Field - 1))
 
+    [<CompiledName("GetSmartValue")>]
     let getSmartValue (message: Embe7.Hl7.Message) (path: Path) =
         match path.Segment with
         | "MSH" -> getMshFieldSmart message path
         | _ -> getSegmentFieldSmart message path
         
+    [<CompiledName("GetPath")>]
     let getPath path =
         match run parsePath path with
         | Success(result, _, _) -> Result.Ok result
         | Failure(err, _, _) -> Result.Error err
+        
+    [<CompiledName("GetSmartValueUnsafe")>]
+    let getSmartValueUnsafe message path =
+        match getPath path with
+        | Result.Ok p -> getSmartValue message p
+        | Result.Error error -> failwith error
+        
+    [<CompiledName("TryGetSmartValue")>]
+    let tryGetSmartValue (message, path, [<System.Runtime.InteropServices.Out>] result: seq<string> byref) =
+        match getPath path with
+        | Result.Ok p ->
+            result <- getSmartValue message p
+            true
+        | Result.Error _ -> false
+
+    [<CompiledName("GetStrictValueUnsafe")>]
+    let getStrictValueUnsafe message path =
+        match getPath path with
+        | Result.Ok p ->
+            match getStrictValue message p with
+            | Result.Ok result -> result
+            | Result.Error error -> failwith error
+        | Result.Error error -> failwith error
+
+    [<CompiledName("TryGetStrictValue")>]
+    let tryGetStrictValue (message: Embe7.Hl7.Message, path: string, [<System.Runtime.InteropServices.Out>] result: string byref) =
+        match getPath path with
+        | Result.Ok p ->
+            match getStrictValue message p with
+            | Result.Ok value -> 
+                result <- value
+                true
+            | Result.Error _ -> false
+        | Result.Error _ -> false

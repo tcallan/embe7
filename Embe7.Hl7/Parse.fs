@@ -151,3 +151,31 @@ module Parse =
 
     [<CompiledName("ParseMllp")>]
     let parseMllp = parse' parseMllpMessages
+
+    [<CompiledName("ParseUnsafe")>]
+    let parseUnsafe input =
+        match parse input with
+        | Core.Ok result -> result
+        | Core.Error error -> failwith error
+
+    [<CompiledName("ParseMllpUnsafe")>]
+    let parseMllpUnsafe input =
+        match parseMllp input with
+        | Core.Ok result -> result
+        | Core.Error error -> failwith error
+
+    [<CompiledName("TryParse")>]
+    let tryParse (input: string, [<System.Runtime.InteropServices.Out>] result: Embe7.Hl7.Message byref) =
+        match parse input with
+        | Core.Ok value -> 
+            result <- value
+            true
+        | Core.Error _ -> false
+
+    [<CompiledName("TryParseMllp")>]
+    let tryParseMllp (input: string, [<System.Runtime.InteropServices.Out>] result: Embe7.Hl7.Message list byref) =
+        match parseMllp input with
+        | Core.Ok value -> 
+            result <- value
+            true
+        | Core.Error _ -> false
