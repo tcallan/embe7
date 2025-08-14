@@ -12,10 +12,22 @@ module Types =
     let internal replace ix v xs =
         xs |> List.mapi (fun i c -> if i = ix then v else c)
 
+    let internal handleNullSeq xs =
+        match box xs with
+        | null -> Seq.empty
+        | _ -> xs
+
+    let internal handleNullString x =
+        match box x with
+        | null -> ""
+        | _ -> x
+
 type SubComponent =
     { Value: string }
 
-    static member Create value = { Value = value }
+    static member Create value =
+        { Value = value |> Types.handleNullString }
+
     static member Create() = { Value = "" }
     static member Contents{ Value = v } = v
 
@@ -31,7 +43,7 @@ type Component =
         { SubComponentsList = [ subComponent ] }
 
     static member Create(subComponents: seq<SubComponent>) =
-        { SubComponentsList = subComponents |> List.ofSeq }
+        { SubComponentsList = subComponents |> Types.handleNullSeq |> List.ofSeq }
 
     static member Create(value: string) =
         value |> SubComponent.Create |> Component.Create
@@ -59,7 +71,7 @@ type FieldRepeat =
     static member Create comp = { ComponentsList = [ comp ] }
 
     static member Create(components: seq<Component>) =
-        { ComponentsList = components |> List.ofSeq }
+        { ComponentsList = components |> Types.handleNullSeq |> List.ofSeq }
 
     static member Create(value: string) =
         value |> Component.Create |> FieldRepeat.Create
@@ -79,7 +91,7 @@ type FieldRepeat =
 
     member this.WithComponents(components: seq<Component>) =
         { this with
-            ComponentsList = components |> List.ofSeq }
+            ComponentsList = components |> Types.handleNullSeq |> List.ofSeq }
 
 type Field =
     internal
@@ -91,10 +103,16 @@ type Field =
     static member Create fieldRepeat = { FieldRepeatsList = [ fieldRepeat ] }
 
     static member Create(fieldRepeats: seq<FieldRepeat>) =
-        { FieldRepeatsList = fieldRepeats |> List.ofSeq }
+        { FieldRepeatsList = fieldRepeats |> Types.handleNullSeq |> List.ofSeq }
 
     static member Create(value: string) =
         value |> FieldRepeat.Create |> Field.Create
+
+    static member Create(components: seq<Component>) =
+        components |> FieldRepeat.Create |> Field.Create
+
+    static member Create(components: seq<string>) =
+        components |> Types.handleNullSeq |> Seq.map Component.Create |> Field.Create
 
     static member Create() = FieldRepeat.Create() |> Field.Create
 
@@ -119,7 +137,7 @@ type Field =
 
     member this.WithFieldRepeats(fieldRepeats: seq<FieldRepeat>) =
         { this with
-            FieldRepeatsList = fieldRepeats |> List.ofSeq }
+            FieldRepeatsList = fieldRepeats |> Types.handleNullSeq |> List.ofSeq }
 
 type Separators =
     internal
@@ -308,10 +326,21 @@ type Message =
 
     static member Create(header, segments: seq<MessageSegment>) =
         { HeaderValue = header
-          SegmentsList = segments |> List.ofSeq }
+          SegmentsList = segments |> Types.handleNullSeq |> List.ofSeq }
 
     static member Create() =
         { HeaderValue = MessageHeader.Create()
           SegmentsList = [] }
 
     member this.WithHeader(header: MessageHeader) = { this with HeaderValue = header }
+
+    member this.WithHeaderField(ix: int, value: Field) =
+        { this with
+            HeaderValue = this.HeaderValue.WithField(ix, value) }
+
+    member this.WithHeaderField(ix: int, value: string) =
+        this.WithHeaderField(ix, Field.Create value)
+
+    member this.WithSegments(segments: seq<MessageSegment>) =
+        { this with
+            SegmentsList = segments |> Types.handleNullSeq |> List.ofSeq }
