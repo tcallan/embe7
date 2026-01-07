@@ -25,6 +25,11 @@ let parse (path, message) =
     | Ok m -> Ok(path, m)
     | Error m -> Error(path, m)
 
+let parseBatch (path, message) =
+    match Embe7.Hl7.Parse.parseBatch message with
+    | Ok m -> Ok(path, m)
+    | Error m -> Error(path, m)
+
 let query q (path, message) = (path, getStrictValue message q)
 let querySmart q (path, message) = (path, getSmartValue message q)
 
@@ -32,7 +37,7 @@ let interpretQuery (path, result) =
     let interpret =
         match result with
         | Ok v -> v
-        | Error m -> sprintf "missing requested message part: %s" m
+        | Error m -> $"missing requested message part: %s{m}"
 
     (path, interpret)
 
@@ -42,7 +47,7 @@ let bimap ok err r =
     | Error v -> err v
 
 let unifyResult r =
-    bimap (fun (path, msg) -> (path, sprintf "%A" msg)) id r
+    bimap (fun (path, msg) -> (path, $"%A{msg}")) id r
 
 let toSeqError result =
     match result with
@@ -55,39 +60,50 @@ let toSeq result =
     | Error _ -> Seq.empty
 
 let report (file, message) =
-    printfn "in %s:" file
-    printfn "%s" message
+    printfn $"in %s{file}:"
+    printfn $"%s{message}"
 
 let reportSmart (file, results) =
-    printfn "in %s:" file
-    printfn "%A" results
+    printfn $"in %s{file}:"
+    printfn $"%A{results}"
 
 let isError m =
     match m with
     | Ok _ -> false
     | Error _ -> true
 
-let doParseDirectory stripMllp fixEscapes d =
+let doParseDirectory stripMllp fixEscapes batch d =
     Directory.EnumerateFiles d
     |> Seq.map (read stripMllp fixEscapes)
-    |> Seq.map parse
-    |> Seq.collect toSeqError
+    |> Seq.map (
+        if batch then
+            parseBatch >> toSeqError
+        else
+            parse >> toSeqError
+    )
+    |> Seq.collect (fun id -> id)
     |> Seq.iter report
 
-let doParseFile stripMllp fixEscapes f =
-    f |> read stripMllp fixEscapes |> parse |> unifyResult |> report
+let doParseFile stripMllp fixEscapes batch f =
+    f
+    |> read stripMllp fixEscapes
+    |> (if batch then
+            parseBatch >> unifyResult
+        else
+            parse >> unifyResult)
+    |> report
 
-let doParseAction stripMllp fixEscapes f =
+let doParseAction stripMllp fixEscapes batch f =
     if Directory.Exists f then
-        printfn "parsing all files in %s and reporting errors" f
+        printfn $"parsing all files in %s{f} and reporting errors"
         printfn ""
-        doParseDirectory stripMllp fixEscapes f
+        doParseDirectory stripMllp fixEscapes batch f
     elif File.Exists f then
-        printfn "parsing %s" f
+        printfn $"parsing %s{f}"
         printfn ""
-        doParseFile stripMllp fixEscapes f
+        doParseFile stripMllp fixEscapes batch f
     else
-        printfn "path %s does not exist" f
+        printfn $"path %s{f} does not exist"
 
 let doNavigateDirectory stripMllp fixEscapes d p =
     Directory.EnumerateFiles d
@@ -124,11 +140,11 @@ let doNavigateFileSmart stripMllp fixEscapes f p =
 let withPath p fn =
     match getPath p with
     | Ok v -> fn v
-    | Error v -> printfn "invalid query: %s" v
+    | Error v -> printfn $"invalid query: %s{v}"
 
 let doNavigateAction smart stripMllp fixEscapes f p =
     if Directory.Exists f then
-        printfn "parsing all files in %s and querying for %s" f p
+        printfn $"parsing all files in %s{f} and querying for %s{p}"
         printfn "any files with parse errors will be silently skipped"
         printfn ""
 
@@ -140,14 +156,14 @@ let doNavigateAction smart stripMllp fixEscapes f p =
 
         fn stripMllp fixEscapes f |> withPath p
     elif File.Exists f then
-        printfn "parsing %s and querying for %s" f p
+        printfn $"parsing %s{f} and querying for %s{p}"
         printfn ""
 
         let fn = if smart then doNavigateFileSmart else doNavigateFile
 
         fn stripMllp fixEscapes f |> withPath p
     else
-        printfn "path %s does not exist" f
+        printfn $"path %s{f} does not exist"
 
 type Option =
     | [<Mandatory>] Path of string
@@ -155,6 +171,7 @@ type Option =
     | Fix_Mllp
     | Fix_Escapes
     | Smart
+    | Batch
 
     interface IArgParserTemplate with
         member s.Usage =
@@ -164,6 +181,7 @@ type Option =
             | Fix_Mllp -> "strip out any MLLP characters before parsing"
             | Fix_Escapes -> "fix any invalid uses of the escape character before parsing"
             | Smart -> "allow querying for multiple message elements"
+            | Batch -> "parse HL7 batch files rather than single message files"
 
 [<EntryPoint>]
 let main argv =
@@ -179,11 +197,12 @@ let main argv =
         let stripMllp = results.Contains Fix_Mllp
         let fixEscapes = results.Contains Fix_Escapes
         let smart = results.Contains Smart
+        let batch = results.Contains Batch
 
         match (file, query) with
-        | _, None -> doParseAction stripMllp fixEscapes file
+        | _, None -> doParseAction stripMllp fixEscapes batch file
         | _, Some q -> doNavigateAction smart stripMllp fixEscapes file q
     with e ->
-        printfn "%s" e.Message
+        printfn $"%s{e.Message}"
 
     0 // return an integer exit code

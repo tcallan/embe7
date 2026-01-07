@@ -151,6 +151,24 @@ let ``parseFields trailing seperator`` () =
     test <@ simpleParse parseFields msg = Core.Ok expected @>
 
 [<Fact>]
+let ``parseSegment handles empty segment`` () =
+    let msg = "ABC|"
+
+    let expected =
+        { NameValue = "ABC"
+          FieldsList = [ mkSimpleField "" ] }
+
+    test <@ simpleParse parseSegment msg = Core.Ok expected @>
+
+[<Fact>]
+let ``parseSegment handles completely empty segment`` () =
+    let msg = "ABC"
+
+    let expected = { NameValue = "ABC"; FieldsList = [] }
+
+    test <@ simpleParse parseSegment msg = Core.Ok expected @>
+
+[<Fact>]
 let ``parseMessageHeader handles a normal MSH segment`` () =
     let header =
         "MSH|^~\\&|INITECH^INITECH^GUID||INITRODE^INITRODE^GUID||20191206103634||DFT^P03|5870023|P|2.3|"
@@ -338,6 +356,26 @@ AIL|1||^^^|||||||||"""
     test <@ parse msg = Core.Ok expected @>
 
 [<Fact>]
+let ``parse handles a completely empty segment`` () =
+    let msg = "MSH|^~\\&|\rEVN\rOBX|\r"
+
+    let expected =
+        { HeaderValue =
+            MessageHeader.Create(
+                { FieldChar = '|'
+                  ComponentChar = '^'
+                  FieldRepeatChar = '~'
+                  EscapeChar = '\\'
+                  SubComponentChar = '&' },
+                [ mkSimpleField "" ]
+            )
+          SegmentsList =
+            [ MessageSegment.Create("EVN", [])
+              MessageSegment.Create("OBX", [ mkSimpleField "" ]) ] }
+
+    test <@ parse msg = Core.Ok expected @>
+
+[<Fact>]
 let ``parse fails on multiple MSH segements`` () =
     let msg =
         """MSH|^~\&|INITECH|foobar|GenericApp|GenericFac|20210331145628||SIU^S17|20210331145628509744|P|2.4|0||AL|AL|
@@ -376,3 +414,96 @@ let ``parseMllp handles multiple messages`` () =
           SegmentsList = [ MessageSegment.Create("ZZZ", [ mkSimpleField "A" ]) ] }
 
     test <@ parseMllp msg = Core.Ok [ expected; expected ] @>
+
+[<Fact>]
+let ``parseBatch handles single message`` () =
+    let msg =
+        "FHS|^~\\&|A|B|C\rBHS|^~\\&|A|B|C\rMSH|^~\\&|A|B|C\rZZZ|A\rBTS|A|B|C\rFTS|A|B|C\r"
+
+    let expectedMessage =
+        { HeaderValue =
+            { SeparatorsValue = Separators.Default
+              FieldsList = [ mkSimpleField "A"; mkSimpleField "B"; mkSimpleField "C" ] }
+          SegmentsList = [ MessageSegment.Create("ZZZ", [ mkSimpleField "A" ]) ] }
+
+    let expectedBatch =
+        { BatchHeaderValue =
+            { SeparatorsValue = Separators.Default
+              FieldsList = [ mkSimpleField "A"; mkSimpleField "B"; mkSimpleField "C" ] }
+          BatchTrailerValue =
+            { NameValue = "BTS"
+              FieldsList = [ mkSimpleField "A"; mkSimpleField "B"; mkSimpleField "C" ] }
+          MessagesList = [ expectedMessage ] }
+
+    let expected =
+        { FileHeaderValue =
+            { SeparatorsValue = Separators.Default
+              FieldsList = [ mkSimpleField "A"; mkSimpleField "B"; mkSimpleField "C" ] }
+          FileTrailerValue =
+            { NameValue = "FTS"
+              FieldsList = [ mkSimpleField "A"; mkSimpleField "B"; mkSimpleField "C" ] }
+          BatchesList = [ expectedBatch ] }
+
+    test <@ parseBatch msg = Core.Ok expected @>
+
+[<Fact>]
+let ``parseBatch handles multiple messages`` () =
+    let msg =
+        "FHS|^~\\&|A|B|C\rBHS|^~\\&|A|B|C\rMSH|^~\\&|A|B|C\rZZZ|A\rMSH|^~\\&|A|B|C\rZZZ|A\rBTS|A|B|C\rFTS|A|B|C\r"
+
+    let expectedMessage =
+        { HeaderValue =
+            { SeparatorsValue = Separators.Default
+              FieldsList = [ mkSimpleField "A"; mkSimpleField "B"; mkSimpleField "C" ] }
+          SegmentsList = [ MessageSegment.Create("ZZZ", [ mkSimpleField "A" ]) ] }
+
+    let expectedBatch =
+        { BatchHeaderValue =
+            { SeparatorsValue = Separators.Default
+              FieldsList = [ mkSimpleField "A"; mkSimpleField "B"; mkSimpleField "C" ] }
+          BatchTrailerValue =
+            { NameValue = "BTS"
+              FieldsList = [ mkSimpleField "A"; mkSimpleField "B"; mkSimpleField "C" ] }
+          MessagesList = [ expectedMessage; expectedMessage ] }
+
+    let expected =
+        { FileHeaderValue =
+            { SeparatorsValue = Separators.Default
+              FieldsList = [ mkSimpleField "A"; mkSimpleField "B"; mkSimpleField "C" ] }
+          FileTrailerValue =
+            { NameValue = "FTS"
+              FieldsList = [ mkSimpleField "A"; mkSimpleField "B"; mkSimpleField "C" ] }
+          BatchesList = [ expectedBatch ] }
+
+    test <@ parseBatch msg = Core.Ok expected @>
+
+[<Fact>]
+let ``parseBatch handles multiple batches`` () =
+    let msg =
+        "FHS|^~\\&|A|B|C\rBHS|^~\\&|A|B|C\rMSH|^~\\&|A|B|C\rZZZ|A\rBTS|A|B|C\rBHS|^~\\&|A|B|C\rMSH|^~\\&|A|B|C\rZZZ|A\rBTS|A|B|C\rFTS|A|B|C\r"
+
+    let expectedMessage =
+        { HeaderValue =
+            { SeparatorsValue = Separators.Default
+              FieldsList = [ mkSimpleField "A"; mkSimpleField "B"; mkSimpleField "C" ] }
+          SegmentsList = [ MessageSegment.Create("ZZZ", [ mkSimpleField "A" ]) ] }
+
+    let expectedBatch =
+        { BatchHeaderValue =
+            { SeparatorsValue = Separators.Default
+              FieldsList = [ mkSimpleField "A"; mkSimpleField "B"; mkSimpleField "C" ] }
+          BatchTrailerValue =
+            { NameValue = "BTS"
+              FieldsList = [ mkSimpleField "A"; mkSimpleField "B"; mkSimpleField "C" ] }
+          MessagesList = [ expectedMessage ] }
+
+    let expected =
+        { FileHeaderValue =
+            { SeparatorsValue = Separators.Default
+              FieldsList = [ mkSimpleField "A"; mkSimpleField "B"; mkSimpleField "C" ] }
+          FileTrailerValue =
+            { NameValue = "FTS"
+              FieldsList = [ mkSimpleField "A"; mkSimpleField "B"; mkSimpleField "C" ] }
+          BatchesList = [ expectedBatch; expectedBatch ] }
+
+    test <@ parseBatch msg = Core.Ok expected @>

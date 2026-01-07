@@ -1,5 +1,6 @@
 namespace Embe7.Hl7
 
+open System.Runtime.InteropServices
 open FParsec
 open System
 open System.Globalization
@@ -113,24 +114,45 @@ module Parse =
 
     let internal parseFields = sepBy parseField parseFieldSep
 
-    let internal parseMessageHeader: Parser<MessageHeader, Separators> =
-        let seg = pstring "MSH"
+    let internal parseSegmentFields = (parseFieldSep >>. parseFields) <|>% []
+
+    let internal parseHeader name : Parser<MessageHeader, Separators> =
+        let seg = pstring name
 
         seg >>. parseSeparators .>> parseFieldSep .>>. (parseFields <|>% [])
         |>> MessageHeader.Create
 
+    let internal parseMessageHeader: Parser<MessageHeader, Separators> =
+        parseHeader "MSH" <?> "message header segment (MSH)"
+
     let private parseSegmentName: Parser<string, Separators> =
-        notFollowedByString "MSH" <?> "segment name other than MSH"
-        >>. many1Chars (upper <|> digit)
-        .>> parseFieldSep
+        notFollowedByString "MSH" >>. many1Chars (upper <|> digit)
+        <?> "segment name other than MSH"
 
-    let private parseSegment: Parser<MessageSegment, Separators> =
-        parseSegmentName .>>. parseFields |>> MessageSegment.Create
+    let private parseBatchedSegmentName: Parser<string, Separators> =
+        notFollowedByString "FHS"
+        >>. notFollowedByString "BHS"
+        >>. notFollowedByString "BTS"
+        >>. notFollowedByString "FTS"
+        >>. parseSegmentName
+        <?> "segment name other than FHS, BHS, BTS, or FTS"
 
-    let private parseMessage =
+    let internal parseSegment: Parser<MessageSegment, Separators> =
+        parseSegmentName .>>. parseSegmentFields |>> MessageSegment.Create
+
+    let private parseBatchedSegment: Parser<MessageSegment, Separators> =
+        parseBatchedSegmentName .>>. parseSegmentFields |>> MessageSegment.Create
+
+    let private parseMessage' segmentParser =
         parseMessageHeader
-        .>>. (segmentSep >>. sepEndBy parseSegment segmentSep <|>% [])
-        |>> fun (header, segments) -> { HeaderValue = header; SegmentsList = segments }
+        .>>. (segmentSep >>. sepEndBy segmentParser segmentSep <|>% [])
+        |>> fun (header, segments) ->
+            { HeaderValue = header
+              SegmentsList = segments }
+
+    let private parseMessage = parseMessage' parseSegment
+
+    let private parseBatchedMessage = parseMessage' parseBatchedSegment
 
     let private parseSingleMessage = parseMessage .>> eof
 
@@ -140,6 +162,37 @@ module Parse =
 
     let private parseMllpMessages =
         many1 (between mllpFrameStart mllpFrameEnd parseMessage) .>> eof
+
+    let private parseBatches =
+        parse {
+            let! header = parseHeader "BHS" .>> segmentSep <?> "batch header segment (BHS)"
+            let! messages = many parseBatchedMessage <|>% []
+
+            let! footer =
+                pstring "BTS" .>> parseFieldSep .>>. parseFields |>> MessageSegment.Create
+                <?> "batch trailer segment (BTS)"
+
+            return
+                { BatchHeaderValue = header
+                  BatchTrailerValue = footer
+                  MessagesList = messages }
+        }
+
+    let private parseBatchFile =
+        parse {
+            let! header = parseHeader "FHS" .>> segmentSep <?> "file header segment (FHS)"
+            let! batches = sepEndBy parseBatches segmentSep <|>% []
+
+            let! footer =
+                pstring "FTS" .>> parseFieldSep .>>. parseFields .>> optional segmentSep .>> eof
+                |>> MessageSegment.Create
+                <?> "file trailer segment (FTS)"
+
+            return
+                { FileHeaderValue = header
+                  FileTrailerValue = footer
+                  BatchesList = batches }
+        }
 
     let private parse' parser input =
         match runParserOnString parser Separators.Default "" input with
@@ -151,6 +204,9 @@ module Parse =
 
     [<CompiledName("ParseMllp")>]
     let parseMllp = parse' parseMllpMessages
+
+    [<CompiledName("ParseBatch")>]
+    let parseBatch = parse' parseBatchFile
 
     [<CompiledName("ParseUnsafe")>]
     let parseUnsafe input =
@@ -165,17 +221,25 @@ module Parse =
         | Core.Error error -> failwith error
 
     [<CompiledName("TryParse")>]
-    let tryParse (input: string, [<System.Runtime.InteropServices.Out>] result: Embe7.Hl7.Message byref) =
+    let tryParse (input: string, [<Out>] result: Embe7.Hl7.Message byref) =
         match parse input with
-        | Core.Ok value -> 
+        | Core.Ok value ->
             result <- value
             true
         | Core.Error _ -> false
 
     [<CompiledName("TryParseMllp")>]
-    let tryParseMllp (input: string, [<System.Runtime.InteropServices.Out>] result: Embe7.Hl7.Message list byref) =
+    let tryParseMllp (input: string, [<Out>] result: Embe7.Hl7.Message list byref) =
         match parseMllp input with
-        | Core.Ok value -> 
+        | Core.Ok value ->
+            result <- value
+            true
+        | Core.Error _ -> false
+
+    [<CompiledName("TryParseBatch")>]
+    let tryParseBatch (input: string, [<Out>] result: MessageFile byref) =
+        match parseBatch input with
+        | Core.Ok value ->
             result <- value
             true
         | Core.Error _ -> false

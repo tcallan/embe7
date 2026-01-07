@@ -344,3 +344,23 @@ type Message =
     member this.WithSegments(segments: seq<MessageSegment>) =
         { this with
             SegmentsList = segments |> Types.handleNullSeq |> List.ofSeq }
+
+type MessageFileBatch =
+    internal
+        { BatchHeaderValue: MessageHeader
+          BatchTrailerValue: MessageSegment
+          MessagesList: list<Message> }
+        
+    member this.BatchHeader: MessageHeader = this.BatchHeaderValue
+    member this.BatchTrailer: MessageSegment = this.BatchTrailerValue
+    member this.Messages: seq<Message> = this.MessagesList
+
+type MessageFile =
+    internal
+        { FileHeaderValue: MessageHeader
+          FileTrailerValue: MessageSegment
+          BatchesList: list<MessageFileBatch> }
+        
+    member this.FileHeader: MessageHeader = this.FileHeaderValue
+    member this.FileTrailer: MessageSegment = this.FileTrailerValue
+    member this.Batches: seq<MessageFileBatch> = this.BatchesList
