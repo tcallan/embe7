@@ -53,6 +53,10 @@ let ``parseSubComponent handles complex hex escape`` () =
 let ``parseSubComponent handles mixed escapes and text`` () =
     test
         <@ simpleParse parseSubComponent "test\\S\\test\\Xe1\\" = Core.Ok({ Value = "test^testá" }) @>
+        
+[<Fact>]
+let ``parseSubComponent handles carriage return`` () =
+    test <@ simpleParse parseSubComponent "\\X0D\\" = Core.Ok({ Value = "\r" }) @>
 
 [<Theory>]
 [<InlineData("\\Z123\\", "\\Z123\\")>]

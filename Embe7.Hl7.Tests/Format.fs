@@ -21,7 +21,7 @@ let ``escapeNonPrinting handles mix`` () =
 let ``formatSubComponent handles empty string`` () =
     let sc = SubComponent.Create ""
     test <@ formatSubComponent Separators.Default sc = "" @>
-    
+
 [<Fact>]
 let ``formatSubComponent handles null string`` () =
     let sc = SubComponent.Create null
@@ -62,22 +62,27 @@ let ``formatSubComponent does not falsely fix things that look like escape seque
 let ``formatSubComponent handles weird control characters`` () =
     let sc = SubComponent.Create "\x1f"
     test <@ formatSubComponent Separators.Default sc = "\\X1F\\" @>
+    
+[<Fact>]
+let ``formatSubComponent handles carriage return`` () =
+    let sc = SubComponent.Create "\r"
+    test <@ formatSubComponent Separators.Default sc = "\\X0D\\" @>
 
 [<Fact>]
 let ``formatComponent handles single empty subcomponent`` () =
     let c = Component.Create [ SubComponent.Create "" ]
 
     test <@ formatComponent Separators.Default c = "" @>
-    
+
 [<Fact>]
 let ``formatComponent handles empty subcomponents`` () =
     let c = Component.Create []
 
     test <@ formatComponent Separators.Default c = "" @>
-    
+
 [<Fact>]
 let ``formatComponent handles null subcomponents`` () =
-    let c = Component.Create (null : seq<SubComponent>)
+    let c = Component.Create(null: seq<SubComponent>)
 
     test <@ formatComponent Separators.Default c = "" @>
 
@@ -96,11 +101,11 @@ let ``formatComponent handles multiple subcomponents`` () =
               SubComponent.Create "here" ]
 
     test <@ formatComponent Separators.Default c = "yep&&here" @>
-    
+
 [<Fact>]
 let ``formatRepetition handles null components`` () =
-    let r = FieldRepeat.Create (null : seq<Component>)
-    
+    let r = FieldRepeat.Create(null: seq<Component>)
+
     test <@ formatRepetition Separators.Default r = "" @>
 
 [<Fact>]
@@ -111,7 +116,7 @@ let ``formatField handles no repetitions`` () =
 
 [<Fact>]
 let ``formatField handles null repetition`` () =
-    let f = Field.Create (null : string)
+    let f = Field.Create(null: string)
 
     test <@ formatField Separators.Default f = "" @>
 
@@ -129,13 +134,13 @@ let ``formatField handles empty repetitions`` () =
 
 [<Fact>]
 let ``formatField handles null repetitions`` () =
-    let f = Field.Create (null : seq<FieldRepeat>)
+    let f = Field.Create(null: seq<FieldRepeat>)
 
     test <@ formatField Separators.Default f = "" @>
 
 [<Fact>]
 let ``formatField handles null components`` () =
-    let f = Field.Create (null : seq<Component>)
+    let f = Field.Create(null: seq<Component>)
 
     test <@ formatField Separators.Default f = "" @>
 
@@ -155,7 +160,7 @@ let ``formatMessageHeader works with no fields`` () =
     let h = MessageHeader.Create(Separators.Default, [])
 
     test <@ formatMessageHeader h = "MSH|^~\\&|" @>
-    
+
 let ``formatMessageHeader works with null fields`` () =
     let h = MessageHeader.Create(Separators.Default, null)
 
@@ -173,9 +178,14 @@ let ``formatMessageHeader works with non standard separators`` () =
     let h = MessageHeader.Create(seps, [ Field.Create "test" ])
 
     test <@ formatMessageHeader h = "MSH*$%`@*test" @>
-    
+
+[<Fact>]
+let ``formatSegment works with no fields`` () =
+    let s = MessageSegment.Create("ABC", [])
+
+    test <@ formatSegment Separators.Default s = "ABC|" @>
+
 [<Fact>]
 let ``formatMessage works with null segments`` () =
     let msg = Message.Create(MessageHeader.Create(), null)
     test <@ formatMessage msg = "MSH|^~\\&|\r" @>
-    
